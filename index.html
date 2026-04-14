@@ -57,8 +57,7 @@ select option{background:var(--sf2)}
 .install-banner{display:none;align-items:center;gap:10px;background:var(--bld);border:1px solid var(--bl);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--bl)}
 .install-banner.show{display:flex}
 .install-btn{margin-left:auto;padding:6px 14px;background:var(--bl);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
-.url-box{font-size:11px;color:var(--am);word-break:break-all;padding:8px 10px;background:var(--sf2);border-radius:6px;border:1px solid var(--bd);display:none}
-.url-box.show{display:block}
+
 
 /* Repo row */
 .repo-row{display:flex;gap:8px;align-items:flex-end}
@@ -136,18 +135,6 @@ select.with-badge{padding-right:52px}
   </div>
 
   <button class="deploy-btn" id="deployBtn" onclick="deploy()" disabled>🚀 Deploy to GitHub Pages</button>
-
-  <!-- MAKE DEPLOYER PERMANENT -->
-  <div class="card">
-    <div class="card-title">📌 Make Deployer Permanent</div>
-    <div style="font-size:13px;color:var(--tx2);line-height:1.5">Upload this deployer to your repo so it lives at a permanent URL. Bookmark it — never open from Downloads again.</div>
-    <div class="url-box" id="deployerURL"></div>
-    <div class="btn-row">
-      <button class="btn-sec" id="selfDeployBtn" onclick="selfDeploy()">📤 Upload Deployer</button>
-      <button class="btn-sec" id="copyBtn" onclick="copyURL()" disabled>📋 Copy URL</button>
-    </div>
-    <div style="font-size:11px;color:var(--tx3)">Saves as <code style="color:var(--am)">deployer.html</code> · Then bookmark the URL above</div>
-  </div>
 
   <!-- STATUS -->
   <div class="status" id="status">
@@ -229,22 +216,10 @@ function updateURL(){
   const r=getRepo();
   const p=document.getElementById('filepath').value.trim()||'index.html';
   document.getElementById('previewURL').textContent=o&&r?`→ ${o}.github.io/${r}/${p}`:'';
-  const ub=document.getElementById('deployerURL');
-  const cb=document.getElementById('copyBtn');
-  if(o&&r){
-    const url=`https://${o}.github.io/${r}/deployer.html`;
-    ub.textContent=url; ub.classList.add('show');
-    cb.disabled=false; cb.dataset.url=url;
-  } else {
-    ub.classList.remove('show'); cb.disabled=true;
-  }
+
 }
 function toggleToken(){const t=document.getElementById('token');t.type=t.type==='password'?'text':'password';}
-function copyURL(){
-  const url=document.getElementById('copyBtn').dataset.url;
-  if(!url)return;
-  navigator.clipboard.writeText(url).then(()=>showToast('✓ URL copied to clipboard'));
-}
+
 function showToast(msg){
   const t=document.createElement('div');
   t.textContent=msg;
@@ -337,7 +312,7 @@ function buildRepoDropdown(repos, preselect){
     opt.value=repo.name;
     opt.dataset.vis=repo.private?'private':'public';
     opt.dataset.branch=repo.default_branch||'main';
-    opt.textContent=(repo.private?'🔒 ':'🌐 ')+repo.name+(repo.description?`  —  ${repo.description.slice(0,40)}${repo.description.length>40?'…':''}` : '');
+    opt.textContent=(repo.private?'🔒 ':'🌐 ')+repo.name;
     if(preselect&&repo.name===preselect) opt.selected=true;
     sel.appendChild(opt);
   }
@@ -454,43 +429,6 @@ async function deploy(){
   document.getElementById('deployBtn').disabled=false;
 }
 
-// ── SELF-DEPLOY ──
-async function selfDeploy(){
-  const token=document.getElementById('token').value.trim();
-  const owner=document.getElementById('owner').value.trim();
-  const repo=getRepo();
-  const branch=document.getElementById('branch').value.trim()||'main';
-  if(!token||!owner||!repo){setStatus('error','Fill in GitHub settings first');return;}
-
-  const btn=document.getElementById('selfDeployBtn');
-  btn.disabled=true;btn.textContent='Uploading…';
-  setStatus('loading','Uploading deployer to GitHub Pages…');
-  setProgress(0);renderSteps([{id:'sd1',label:`Uploading deployer.html → ${owner}/${repo}`}]);
-  stepState('sd1','active');
-
-  try{
-    const html=document.documentElement.outerHTML;
-    await ghPut(token,owner,repo,branch,'deployer.html',html,`Deploy MetrIQ Deployer — ${new Date().toLocaleString('en-SG')}`);
-    stepState('sd1','done','✓ deployer.html uploaded');setProgress(100);
-
-    const url=`https://${owner}.github.io/${repo}/deployer.html`;
-    document.getElementById('statusMsg').textContent='🎉 Deployer is now permanent!';
-    document.getElementById('liveLink').innerHTML=
-      `<a class="live-link" href="${url}" target="_blank">📌 Open & Bookmark This URL</a>
-       <div style="margin-top:8px;font-size:12px;color:var(--gn);line-height:1.5">
-         Bookmark that URL in Chrome. Next time you visit it, Chrome will offer to <strong>install it as an app</strong> on your home screen — no file needed ever again.
-       </div>`;
-    document.getElementById('status').className='status show success';
-    document.getElementById('deployerURL').textContent=url;
-    document.getElementById('deployerURL').classList.add('show');
-    document.getElementById('copyBtn').disabled=false;
-    document.getElementById('copyBtn').dataset.url=url;
-  }catch(err){
-    setStatus('error','❌ '+err.message);
-    document.querySelectorAll('.step.active').forEach(s=>{s.className='step err';s.querySelector('.step-dot').style.background='var(--rd)';});
-  }
-  btn.disabled=false;btn.textContent='📤 Upload Deployer';
-}
 
 // ── UI HELPERS ──
 function setStatus(type,msg){
